@@ -7,7 +7,9 @@ from backend.BuyBot import BuyBot
 from backend.utils import *
 import keyboard
 from config import DefaultConfig
-from monitors import set_console_window_position, set_window_position
+from monitors import set_console_window_position, set_window_position, get_monitor_counts
+
+
 
 def is_admin():
     """
@@ -161,6 +163,8 @@ class Worker(QThread):
         self.lock.lock()
         self._is_running = state
         self.lock.unlock()
+        
+        
 
 def runApp():
     app = QtWidgets.QApplication([])
@@ -176,8 +180,12 @@ def runApp():
     mainWindow.is_key_mode.setChecked(DefaultConfig.IS_KEY_MODE)
     mainWindow.is_half_coin_mode.setChecked(DefaultConfig.IS_HALF_COIN_MODE)
 
-    set_window_position(app, window, 2, 1000, 100)
-
+    try:
+        target_monitor_number = 1
+        set_console_window_position(target_monitor_number, 100, 100)
+        set_window_position(app, window, target_monitor_number, 1400, 100)
+    except ValueError as e:
+        print(f"设置窗口位置失败: {e}")
 
     # 创建监控线程
     key_monitor = KeyMonitor()
@@ -226,8 +234,6 @@ if __name__ == "__main__":
         ctypes.windll.shell32.ShellExecuteW(
             None, "runas", sys.executable, f'"{script}" {params}', None, 1)
         sys.exit(0)
-
-    set_console_window_position(2, 100, 100)
 
     print("正在初始化")
     sys.exit(main())

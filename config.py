@@ -7,3 +7,4 @@ class DefaultConfig:
     IS_CONVERTIBLE = True
     IS_KEY_MODE = False
     IS_HALF_COIN_MODE = False
+    
