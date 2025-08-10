@@ -45,6 +45,7 @@ def get_windowshot(range:list, debug_mode = False):
                  int(screen_size.height * range[1]), 
                  int(screen_size.width * range[2]), 
                  int(screen_size.height * range[3])]
+        # print("Adjusted range:", range)
     screenshot = pyautogui.screenshot(region=(range[0], range[1], range[2]-range[0], range[3]-range[1]))
     if debug_mode:
         screenshot.save('screenshot.png')

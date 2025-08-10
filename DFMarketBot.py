@@ -6,6 +6,7 @@ from GUI.AppGUI import Ui_MainWindow
 from backend.BuyBot import BuyBot
 from backend.utils import *
 import keyboard
+from config import DefaultConfig
 
 def is_admin():
     """
@@ -167,12 +168,32 @@ def runApp():
     mainWindow.setupUi(window)
 
     # 初始化输入部分
-    mainWindow.textEdit_ideal_price.setText('0')
-    mainWindow.textEdit_unacceptable_price.setText('0')
-    mainWindow.textEdit_loop_gap.setText('150')
-    mainWindow.is_convertiable.setChecked(True)
-    mainWindow.is_key_mode.setChecked(False)
-    mainWindow.is_half_coin_mode.setChecked(False)
+    mainWindow.textEdit_ideal_price.setText(str(DefaultConfig.IDEAL_PRICE))
+    mainWindow.textEdit_unacceptable_price.setText(str(DefaultConfig.UNACCEPTABLE_PRICE))
+    mainWindow.textEdit_loop_gap.setText(str(DefaultConfig.LOOP_GAP))
+    mainWindow.is_convertiable.setChecked(DefaultConfig.IS_CONVERTIBLE)
+    mainWindow.is_key_mode.setChecked(DefaultConfig.IS_KEY_MODE)
+    mainWindow.is_half_coin_mode.setChecked(DefaultConfig.IS_HALF_COIN_MODE)
+    
+    # 设置窗口位置 - 多显示器环境
+    # 获取所有可用的屏幕
+    screens = app.screens()
+    if len(screens) > 1:
+        # 选择第二个显示器 (索引为1)
+        # 如果要选择其他显示器，可以修改索引值
+        target_screen_index = 1  # 0=主屏幕，1=第二屏幕，依此类推
+        target_screen = screens[target_screen_index]
+        
+        # 获取目标屏幕的几何信息
+        screen_geometry = target_screen.geometry()
+        
+        # 在目标屏幕上的特定位置显示窗口
+        # 例如，在目标屏幕的左上角位置(1000, 100)
+        window.move(screen_geometry.left() + 1000, screen_geometry.top() + 100)
+    else:
+        # 只有一个显示器的情况
+        window.move(100, 100)
+
 
     # 创建监控线程
     key_monitor = KeyMonitor()
@@ -202,6 +223,9 @@ def runApp():
     mainWindow.is_convertiable.stateChanged.connect(handle_text_change)
     mainWindow.is_key_mode.stateChanged.connect(handle_text_change)
     mainWindow.is_half_coin_mode.stateChanged.connect(handle_text_change)
+    
+    # 确保前端数据与后端同步
+    handle_text_change()
 
     window.show()
     worker.start()
@@ -213,8 +237,76 @@ def main():
 if __name__ == "__main__":
     if not is_admin():
         # 尝试重新以管理员身份启动
+        script = sys.argv[0]
+        params = " ".join([f'"{item}"' for item in sys.argv[1:]]) if len(sys.argv) > 1 else ""
         ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+            None, "runas", sys.executable, f'"{script}" {params}', None, 1)
         sys.exit(0)
+        
+        # 尝试设置控制台窗口位置
+    try:
+        import ctypes
+        from ctypes import wintypes
+        
+        kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+        user32 = ctypes.WinDLL('user32', use_last_error=True)
+        
+        SW_RESTORE = 9
+        
+        # 获取控制台窗口句柄
+        hwnd = kernel32.GetConsoleWindow()
+        
+        # 如果存在控制台窗口
+        if hwnd:
+            try:
+                # 获取指定显示器的位置信息
+                monitor_index = 0  # 0表示主显示器，1表示第二个显示器
+                
+                # 枚举显示器的回调函数
+                def MonitorEnumProc(hMonitor, hdcMonitor, lprcMonitor, dwData):
+                    monitors.append((lprcMonitor.contents.left, lprcMonitor.contents.top, 
+                                    lprcMonitor.contents.right, lprcMonitor.contents.bottom))
+                    return True
+                
+                # 定义回调函数的原型
+                MonitorEnumProcType = ctypes.WINFUNCTYPE(
+                    ctypes.c_bool,
+                    ctypes.c_ulong,
+                    ctypes.c_ulong,
+                    ctypes.POINTER(wintypes.RECT),
+                    ctypes.c_ulong
+                )
+                
+                # 枚举所有显示器
+                monitors = []
+                callback = MonitorEnumProcType(MonitorEnumProc)
+                user32.EnumDisplayMonitors(None, None, callback, 0)
+                
+                # 确保目标显示器索引有效
+                if monitor_index < len(monitors):
+                    monitor_left, monitor_top, monitor_right, monitor_bottom = monitors[monitor_index]
+                    # 在目标显示器上定位窗口(左上角坐标为显示器起始点+相对位置)
+                    x = monitor_left + 100  # 目标显示器左边界 + 100像素
+                    y = monitor_top + 100   # 目标显示器上边界 + 100像素
+                    width = 800
+                    height = 600
+                    
+                    # 移动窗口到指定显示器上的指定位置
+                    user32.SetWindowPos(hwnd, 0, x, y, width, height, 0x0040)
+                    # 确保窗口可见
+                    user32.ShowWindow(hwnd, SW_RESTORE)
+                else:
+                    # 如果指定的显示器不存在，则使用默认位置
+                    print(f"显示器{monitor_index}不存在，使用默认位置")
+                    user32.SetWindowPos(hwnd, 0, 100, 100, 800, 600, 0x0040)
+                    user32.ShowWindow(hwnd, SW_RESTORE)
+            except Exception as e:
+                print(f"定位到特定显示器失败: {e}")
+                # 使用默认位置
+                user32.SetWindowPos(hwnd, 0, 100, 100, 800, 600, 0x0040)
+                user32.ShowWindow(hwnd, SW_RESTORE)
+    except Exception as e:
+        print(f"设置控制台窗口位置失败: {e}")
+        
     print("正在初始化")
     sys.exit(main())
