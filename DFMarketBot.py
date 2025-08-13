@@ -4,7 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal, Qt, QThread
 from GUI.AppGUI import Ui_MainWindow
 from backend.BuyBot import BuyBot
-from backend.utils import *
+from backend.utils import get_mouse_position, mouse_click
 import keyboard
 from config import DefaultConfig
 from monitors import set_console_window_position, set_window_position, get_monitor_counts
@@ -35,13 +35,14 @@ class KeyMonitor(QObject):
             self.key_pressed.emit(1)
             print('停止循环')
 
+
 class Worker(QThread):
     update_signal = pyqtSignal(int)
     param_update = pyqtSignal(int)  # 新增参数更新信号
 
-    def __init__(self, buybot):
+    def __init__(self, buybot: BuyBot):
         super().__init__()
-        self.buybot = buybot
+        self.buybot: BuyBot = buybot
         self._is_running = False
         self.lock = QtCore.QMutex()
         self.ideal_price = 0
@@ -69,7 +70,7 @@ class Worker(QThread):
             running = self._is_running
             self.lock.unlock()
             if first_loop == False:
-                first_loop == True
+                first_loop = True
             if running:
                 try:
                     # 获取当前参数值
@@ -83,8 +84,9 @@ class Worker(QThread):
                     
                     # 进入商品页面
                     mouse_click(self.mouse_position, num = 1)
+                    # self.msleep(375)
                     
-                    # 获取商品价格
+                    # 获取商品价格 
                     if current_half_coin_mode and (not first_loop) and (buy_number != 0):
                         # 使用哈夫币余额差值计算价格
                         try:
@@ -126,6 +128,7 @@ class Worker(QThread):
                             print('高于理想价格', current_ideal, ' 刷新价格')
                             self.buybot.refresh(is_convertible=current_convertible)
                             buy_number = 31 #原始值为 购买子弹价格/1 ，修改为 购买子弹价格/31
+                            # self.msleep(2500)
                         else:
                             print('低于理想价格', current_ideal, ' 开始购买')
                             self.buybot.buy(is_convertible=current_convertible)
@@ -140,7 +143,8 @@ class Worker(QThread):
                         self.buybot.freerefresh(good_postion=self.mouse_position)
                     else:
                         print(f"操作失败: {str(e)}")
-                self.msleep(self.loop_gap)
+                if self.loop_gap > 0:
+                    self.msleep(self.loop_gap)
             else:
                 self.msleep(100)
                 # 标记为第一次循环
@@ -189,8 +193,10 @@ def runApp():
 
     # 创建监控线程
     key_monitor = KeyMonitor()
-    worker = Worker(BuyBot())
-    
+    buyBot = BuyBot()
+    worker = Worker(buyBot)
+    buyBot.set_worker(worker)
+
     # 信号连接
     def handle_key_event(x):
         if x == 0:

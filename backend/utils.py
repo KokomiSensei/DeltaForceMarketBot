@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import time
 import pyautogui
 
 def is_windowized(window_title:str):

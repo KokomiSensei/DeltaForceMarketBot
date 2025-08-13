@@ -7,6 +7,9 @@ else:
 import time
 import easyocr
 import numpy as np
+from PyQt5.QtCore import QThread
+from config import DefaultConfig
+
 
 class BuyBot:
     def __init__(self):
@@ -25,6 +28,9 @@ class BuyBot:
         self.balance_half_coin = None
         print('初始化完成')
     
+    def set_worker(self, worker: QThread):
+        self.worker = worker
+    
     def identify_number(self, img, debug_mode = False):
         try:
             text = self.reader.readtext(np.array(img))
@@ -38,7 +44,9 @@ class BuyBot:
             print(text)
         return int(text) if text else None
 
-    def detect_price(self, is_convertible, debug_mode = False):
+    def detect_price(self,  is_convertible: bool, debug_mode = False, wait_ms: int = DefaultConfig.SCREENSHOT_DELAY_MS):
+        if wait_ms > 0:
+            self.worker.msleep(wait_ms)
         if is_convertible:
             self._screenshot = get_windowshot(self.range_isconvertible_lowest_price, debug_mode=debug_mode)
         else:
@@ -51,10 +59,12 @@ class BuyBot:
             raise Exception('识别失败')
         return int(self.lowest_price)
 
-    def detect_balance_half_coin(self, debug_mode = False):
+    def detect_balance_half_coin(self, wait_ms: int = DefaultConfig.SCREENSHOT_DELAY_MS, debug_mode = False):
         # 先把鼠标移到余额位置
         mouse_move(self.postion_balance)
         # 对哈夫币余额范围进行截图然后识别
+        if wait_ms > 0:
+            self.worker.msleep(wait_ms)
         self._screenshot = get_windowshot(self.postion_balance_half_coin, debug_mode=debug_mode)
         self.balance_half_coin = self.identify_number(self._screenshot)
 
@@ -62,9 +72,9 @@ class BuyBot:
             print('哈夫币余额检测识别失败或不稳定，建议关闭余额识别相关功能')
         return self.balance_half_coin
     
-    def get_half_coin_diff(self):
+    def get_half_coin_diff(self, wait_ms: int = DefaultConfig.SCREENSHOT_DELAY_MS):
         previous_balance_half_coin = self.balance_half_coin
-        self.detect_balance_half_coin()
+        self.detect_balance_half_coin(wait_ms)
         return self.balance_half_coin - previous_balance_half_coin
 
     def buy(self, is_convertible):
