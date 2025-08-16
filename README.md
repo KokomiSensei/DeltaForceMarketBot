@@ -2,11 +2,61 @@
 
 用于腾讯三角洲行动游戏内交易行的市场工具
 
-# 部署
+## 新版本: 前后端分离架构
 
-下载代码，安装requirements.txt
+现在这个工具提供了一个更友好的 Streamlit 界面，后端API基于 FastAPI 实现。这种架构使得操作更加便捷，并提供了更好的用户体验。
 
-# 运行
+## 部署
+
+1. 下载代码
+2. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+## 运行新版界面
+
+### 完整应用（前后端一起启动）
+
+```python
+python run_app.py
+```
+
+这个命令会同时启动后端API服务和Streamlit前端界面，并自动在浏览器中打开控制面板。
+
+### 分离运行选项
+
+您也可以单独运行API服务器或前端界面：
+
+```python
+# 只运行API服务器
+python run_app.py --api-only
+
+# 只运行Streamlit前端界面
+python run_app.py --ui-only
+
+# 显示帮助信息
+python run_app.py --help
+```
+
+**注意：** 当使用 `--ui-only` 选项时，您需要确保API服务器已经在另一个终端中运行，否则前端将无法正常工作。
+
+### 使用界面控制
+
+1. 在侧边栏设置您的理想价格、购买数量和截图延迟
+2. 点击"Apply Configuration"保存设置
+3. 切换到游戏窗口，进入商店页面
+4. 返回界面点击"Start Bot"开始自动购买
+5. 随时可以点击"Stop Bot"停止操作
+
+### 调试模式
+
+启用调试模式后，机器人会移动到购买按钮但不会点击，帮助您安全测试而不会实际进行购买。
+
+## 传统运行方式
+
+也可以使用传统方式运行:
 
 ```python
 python DFMarketBot.py
