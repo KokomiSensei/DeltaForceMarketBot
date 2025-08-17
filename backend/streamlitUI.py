@@ -6,6 +6,7 @@ import os
 import sys
 import subprocess
 from threading import Thread
+from buyBot2 import DefaultConfig
 import socket
 
 # Add API server URL
@@ -126,10 +127,10 @@ if status:
 else:
     # Default values if API is not responding
     config = {
-        "lowest_price": 608,
-        "volume": 60 * (5 + 4 + 21),
-        "screenshot_delay": 100,
-        "debug_mode": True
+        "lowest_price": DefaultConfig.MinPrice,
+        "volume": DefaultConfig.Volume,
+        "screenshot_delay": DefaultConfig.ScreenshotDelayMs,
+        "debug_mode": DefaultConfig.DebugMode
     }
     running = False
 
@@ -138,27 +139,31 @@ lowest_price = st.sidebar.number_input(
     "Lowest Price (per item)",
     min_value=1,
     value=config["lowest_price"],
-    help="The minimum price per item below which the bot will make a purchase"
+    help="The minimum price per item below which the bot will make a purchase",
+    # on_change=update_config
 )
 
 volume = st.sidebar.number_input(
     "Volume",
     min_value=1,
     value=config["volume"],
-    help="The number of items to purchase"
+    help="The number of items to purchase",
+    # on_change=update_config
 )
 
 screenshot_delay = st.sidebar.number_input(
     "Screenshot Delay (ms)",
     min_value=0,
     value=config["screenshot_delay"],
-    help="Delay in milliseconds between taking screenshots"
+    help="Delay in milliseconds between taking screenshots",
+    # on_change=update_config
 )
 
 debug_mode = st.sidebar.checkbox(
     "Debug Mode",
     value=config["debug_mode"],
-    help="In debug mode, the bot will move to the purchase button but not click it"
+    help="In debug mode, the bot will move to the purchase button but not click it",
+    # on_change=update_config
 )
 
 # Apply configuration button

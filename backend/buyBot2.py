@@ -11,17 +11,22 @@ import keyboard
 import threading
 
 class DefaultConfig:
-    ScreenshotDelayMs = 100
-    MinPrice = 608
-    Volume = 60*(5+4+21)
+    ScreenshotDelayMs = 150
+    MinPrice = 548
+    Volume = 3540
+    DebugMode = False
 
 class PositionalConstants:
     DeveloperResolution = (2560, 1440)
     SmallScaleSchemaButton  = (266, 593)
     SchemaButton = (261, 690)
     PurchaseButton = (2257, 1154)
+    
     PriceRangeTopLeft = (2200, 1150)
     PriceRangeBottomRight = (2330, 1175)
+    
+    WarningRangeTopLeft = (1233, 989)
+    WarningRangeBottomRight = (1360, 1020)
 
     @staticmethod
     def get_mapped(coord, resolution = None):
@@ -103,7 +108,7 @@ class BuyBot:
         self.lowest_price = DefaultConfig.MinPrice
         self.volume = DefaultConfig.Volume
         self.screenshot_delay = DefaultConfig.ScreenshotDelayMs
-        self.debug_mode = True
+        self.debug_mode = DefaultConfig.DebugMode
         self.controller = BuyBot.BotController(self)
         logger.debug("BuyBot initialized with lowest_price=%s, volume=%s, screenshot_delay=%s", 
                     self.lowest_price, self.volume, self.screenshot_delay)
@@ -131,9 +136,19 @@ class BuyBot:
         total_price = self.identify_number(img)
         logger.debug("Identified total price: %s", total_price)
         return total_price
+    
+    def identify_warning(self):
+        if self.screenshot_delay > 0:
+            time.sleep(self.screenshot_delay / 1000.0)
+        logger.debug("Taking screenshot for warning identification")
+        img = get_windowshot(PositionalConstants.to_ratio_range(PositionalConstants.WarningRangeTopLeft, PositionalConstants.WarningRangeBottomRight))
+        warning_price = self.identify_number(img)
+        logger.debug("Identified warning price: %s", warning_price)
+        return warning_price
 
     def massive_purchase(self):
         avg_price = 9999999
+        schema_button_position = PositionalConstants.SmallScaleSchemaButton if self.debug_mode else PositionalConstants.SchemaButton
         while True:
             if not self.controller.running:
                 logger.debug("Controller not running, exiting massive_purchase")
@@ -150,10 +165,7 @@ class BuyBot:
             logger.debug("Pressing ESC and L keys")
             pyautogui.press('esc')
             pyautogui.press('l')
-            if self.debug_mode:
-                mouse_click(PositionalConstants.to_ratio(PositionalConstants.SmallScaleSchemaButton))
-            else:
-                mouse_click(PositionalConstants.to_ratio(PositionalConstants.SchemaButton))
+            mouse_click(PositionalConstants.to_ratio(schema_button_position))
 
         logger.info(f"Found good price! Average: {avg_price:.2f} < {self.lowest_price}")
         if self.debug_mode:
@@ -163,6 +175,19 @@ class BuyBot:
         else:
             logger.info("Clicking purchase button")
             mouse_click(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
+        try:
+            time.sleep(1)
+            warning_price = self.identify_warning()
+            if warning_price > self.lowest_price:
+                logger.warning(f"Warning price: {warning_price} > Lowest price: {self.lowest_price}")
+                pyautogui.press('esc')
+                pyautogui.press('l')
+                mouse_click(PositionalConstants.to_ratio(schema_button_position))
+            else:
+                mouse_click(PositionalConstants.to_ratio(PositionalConstants.WarningRangeTopLeft))
+        except OcrException as e:
+            logger.error(f"Error identifying warning price: {e}")
+            logger.info("Probably made a successful purchase!")
 
 
 if __name__ == '__main__':
