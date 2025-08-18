@@ -140,8 +140,7 @@ class BuyBot:
         logger.info(f"Found good price! Average: {avg_price:.2f} < {self.config.lowest_price}")
         if self.config.debug_mode:
             logger.debug("Debug mode: Moving mouse to purchase button")
-            # mouse_move(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
-            mouse_click(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
+            mouse_move(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
         else:
             logger.info("Clicking purchase button")
             mouse_click(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
