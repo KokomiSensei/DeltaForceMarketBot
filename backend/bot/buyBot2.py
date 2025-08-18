@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
+from backend.bot import constants
 from backend.bot.constants import PositionalConstants
 from backend.util.position_adapter import mouse_click, mouse_move, get_windowshot
 from backend.bot.adminAuth import is_admin, run_as_admin
 from backend.bot.logger import logger
+from backend.bot.config import DefaultConfig, LocalConfig
+
 import time
 import easyocr
 import numpy as np
@@ -11,11 +14,8 @@ import pyautogui
 import keyboard
 import threading
 
-class DefaultConfig:
-    ScreenshotDelayMs = 150
-    MinPrice = 548
-    Volume = 3540
-    DebugMode = False
+
+
 
 
 class OcrException(Exception):
@@ -73,13 +73,10 @@ class BuyBot:
     def __init__(self):
         logger.info("Initializing BuyBot")
         self.reader = easyocr.Reader(['en'], gpu=True)
-        self.lowest_price = DefaultConfig.MinPrice
-        self.volume = DefaultConfig.Volume
-        self.screenshot_delay = DefaultConfig.ScreenshotDelayMs
-        self.debug_mode = DefaultConfig.DebugMode
+        self.config = LocalConfig.from_file(constants.PathConstants.ConfigFile)
         self.controller = BuyBot.BotController(self)
         logger.debug("BuyBot initialized with lowest_price=%s, volume=%s, screenshot_delay=%s", 
-                    self.lowest_price, self.volume, self.screenshot_delay)
+                    self.config.lowest_price, self.config.volume, self.config.screenshot_delay)
 
     def identify_number(self, img):
         try:
@@ -97,8 +94,8 @@ class BuyBot:
             raise OcrException(f"OCR operation failed: {e}") from e
 
     def identify_price(self):
-        if self.screenshot_delay > 0:
-            time.sleep(self.screenshot_delay / 1000.0)
+        if self.config.screenshot_delay > 0:
+            time.sleep(self.config.screenshot_delay / 1000.0)
         logger.debug("Taking screenshot for price identification")
         img = get_windowshot(PositionalConstants.to_ratio_range(PositionalConstants.PriceRangeTopLeft, PositionalConstants.PriceRangeBottomRight))
         total_price = self.identify_number(img)
@@ -106,8 +103,8 @@ class BuyBot:
         return total_price
     
     def identify_warning(self):
-        if self.screenshot_delay > 0:
-            time.sleep(self.screenshot_delay / 1000.0)
+        if self.config.screenshot_delay > 0:
+            time.sleep(self.config.screenshot_delay / 1000.0)
         logger.debug("Taking screenshot for warning identification")
         img = get_windowshot(PositionalConstants.to_ratio_range(PositionalConstants.WarningRangeTopLeft, PositionalConstants.WarningRangeBottomRight))
         warning_price = self.identify_number(img)
@@ -116,16 +113,16 @@ class BuyBot:
 
     def massive_purchase(self):
         avg_price = 9999999
-        schema_button_position = PositionalConstants.Schema.Button(3) if self.debug_mode else PositionalConstants.Schema.Button(4)
+        schema_button_position = PositionalConstants.Schema.Button(self.config.target_schema_index)
         while True:
             if not self.controller.running:
                 logger.debug("Controller not running, exiting massive_purchase")
                 return
             try:
                 total_price = self.identify_price()
-                avg_price = (total_price / self.volume) if self.volume > 0 else total_price
-                logger.info(f"Total price: {total_price} / Volume: {self.volume} = Avg price: {avg_price:.2f}, Lowest: {self.lowest_price}")
-                if avg_price <= self.lowest_price:
+                avg_price = (total_price / self.config.volume) if self.config.volume > 0 else total_price
+                logger.info(f"Total price: {total_price} / Volume: {self.config.volume} = Avg price: {avg_price:.2f}, Lowest: {self.config.lowest_price}")
+                if avg_price <= self.config.lowest_price:
                     break
             except OcrException as e:
                 logger.error(f"Error identifying price: {e}")
@@ -139,8 +136,8 @@ class BuyBot:
             mouse_click(PositionalConstants.to_ratio(PositionalConstants.Schema.Button(0)))
             mouse_click(PositionalConstants.to_ratio(schema_button_position))
 
-        logger.info(f"Found good price! Average: {avg_price:.2f} < {self.lowest_price}")
-        if self.debug_mode:
+        logger.info(f"Found good price! Average: {avg_price:.2f} < {self.config.lowest_price}")
+        if self.config.debug_mode:
             logger.debug("Debug mode: Moving mouse to purchase button")
             # mouse_move(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
             mouse_click(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
@@ -150,8 +147,8 @@ class BuyBot:
         try:
             time.sleep(1)
             warning_price = self.identify_warning()
-            if warning_price > self.lowest_price:
-                logger.warning(f"Warning price: {warning_price} > Lowest price: {self.lowest_price}")
+            if warning_price > self.config.lowest_price:
+                logger.warning(f"Warning price: {warning_price} > Lowest price: {self.config.lowest_price}")
                 pyautogui.press('esc')
                 pyautogui.press('l')
                 mouse_click(PositionalConstants.to_ratio(schema_button_position))

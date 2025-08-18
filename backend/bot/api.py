@@ -8,7 +8,8 @@ import keyboard
 from pydantic import BaseModel
 import uvicorn
 from typing import Dict, Optional
-from backend.bot.buyBot2 import BuyBot, DefaultConfig
+from backend.bot.buyBot2 import BuyBot
+from backend.bot.config import DefaultConfig
 from backend.bot.logger import logger
 
 # FastAPI app
@@ -29,10 +30,11 @@ def get_bot_instance():
 
 # Data models
 class BotConfig(BaseModel):
-    lowest_price: Optional[int] = DefaultConfig.MinPrice
-    volume: Optional[int] = DefaultConfig.Volume
-    screenshot_delay: Optional[int] = DefaultConfig.ScreenshotDelayMs
-    debug_mode: Optional[bool] = True
+    lowest_price: Optional[int] = DefaultConfig.lowest_price
+    volume: Optional[int] = DefaultConfig.volume
+    screenshot_delay: Optional[int] = DefaultConfig.screenshot_delay
+    debug_mode: Optional[bool] = DefaultConfig.debug_mode
+    target_schema_index: Optional[int] = DefaultConfig.target_schema_index
 
 class BotStatus(BaseModel):
     running: bool
@@ -46,10 +48,11 @@ def get_status():
     return {
         "running": bot.controller.running,
         "config": {
-            "lowest_price": bot.lowest_price,
-            "volume": bot.volume,
-            "screenshot_delay": bot.screenshot_delay,
-            "debug_mode": bot.debug_mode
+            "lowest_price": bot.config.lowest_price,
+            "volume": bot.config.volume,
+            "screenshot_delay": bot.config.screenshot_delay,
+            "debug_mode": bot.config.debug_mode,
+            "target_schema_index": bot.config.target_schema_index
         }
     }
 
@@ -79,14 +82,16 @@ def update_config(config: BotConfig):
     bot = get_bot_instance()
     
     if config.lowest_price is not None:
-        bot.lowest_price = config.lowest_price
+        bot.config.lowest_price = config.lowest_price
     if config.volume is not None:
-        bot.volume = config.volume
+        bot.config.volume = config.volume
     if config.screenshot_delay is not None:
-        bot.screenshot_delay = config.screenshot_delay
+        bot.config.screenshot_delay = config.screenshot_delay
     if config.debug_mode is not None:
-        bot.debug_mode = config.debug_mode
-    
+        bot.config.debug_mode = config.debug_mode
+    if config.target_schema_index is not None:
+        bot.config.target_schema_index = config.target_schema_index
+
     logger.info(f"Configuration updated: {config.dict(exclude_unset=True)}")
     return {"message": "Configuration updated successfully"}
 

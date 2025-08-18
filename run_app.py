@@ -27,10 +27,6 @@ def start_streamlit_ui():
     )
     return streamlit_process
 
-def open_browser():
-    """Open web browser to Streamlit UI after a delay"""
-    time.sleep(5)  # Give Streamlit time to start
-    webbrowser.open("http://localhost:8501")
 
 def show_help():
     """Display help information"""
@@ -72,10 +68,6 @@ if __name__ == "__main__":
     elif args.ui_only:
         # Start Streamlit UI only
         streamlit_process = start_streamlit_ui()
-        # Open web browser after a delay
-        browser_thread = threading.Thread(target=open_browser)
-        browser_thread.daemon = True
-        browser_thread.start()
         print("Streamlit UI running! Access UI at http://localhost:8501")
         print("Press Ctrl+C to exit...")
         try:
@@ -89,11 +81,7 @@ if __name__ == "__main__":
         # Start both API server and Streamlit UI (default behavior)
         api_process = start_api_server()
         streamlit_process = start_streamlit_ui()
-        
-        # Open web browser after a delay
-        browser_thread = threading.Thread(target=open_browser)
-        browser_thread.daemon = True
-        browser_thread.start()
+
         
         try:
             # Wait for the processes to complete (which they won't unless killed)

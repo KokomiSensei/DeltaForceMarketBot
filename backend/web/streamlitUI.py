@@ -6,8 +6,11 @@ import os
 import sys
 import subprocess
 from threading import Thread
+from backend.bot import constants
 from backend.bot.buyBot2 import DefaultConfig
 import socket
+
+from backend.bot.config import LocalConfig
 
 # Add API server URL
 API_URL = "http://127.0.0.1:8000"
@@ -127,10 +130,11 @@ if status:
 else:
     # Default values if API is not responding
     config = {
-        "lowest_price": DefaultConfig.MinPrice,
-        "volume": DefaultConfig.Volume,
-        "screenshot_delay": DefaultConfig.ScreenshotDelayMs,
-        "debug_mode": DefaultConfig.DebugMode
+        "lowest_price": DefaultConfig.lowest_price,
+        "volume": DefaultConfig.volume,
+        "screenshot_delay": DefaultConfig.screenshot_delay,
+        "debug_mode": DefaultConfig.debug_mode,
+        "target_schema_index": DefaultConfig.target_schema_index
     }
     running = False
 
@@ -140,7 +144,7 @@ lowest_price = st.sidebar.number_input(
     min_value=1,
     value=config["lowest_price"],
     help="The minimum price per item below which the bot will make a purchase",
-    # on_change=update_config
+    on_change=lambda: update_config({"lowest_price": lowest_price})
 )
 
 volume = st.sidebar.number_input(
@@ -148,7 +152,7 @@ volume = st.sidebar.number_input(
     min_value=1,
     value=config["volume"],
     help="The number of items to purchase",
-    # on_change=update_config
+    on_change=lambda: update_config({"volume": volume})
 )
 
 screenshot_delay = st.sidebar.number_input(
@@ -156,27 +160,39 @@ screenshot_delay = st.sidebar.number_input(
     min_value=0,
     value=config["screenshot_delay"],
     help="Delay in milliseconds between taking screenshots",
-    # on_change=update_config
+    on_change=lambda: update_config({"screenshot_delay": screenshot_delay})
 )
 
 debug_mode = st.sidebar.checkbox(
     "Debug Mode",
     value=config["debug_mode"],
     help="In debug mode, the bot will move to the purchase button but not click it",
-    # on_change=update_config
+    on_change=lambda: update_config({"debug_mode": debug_mode})
 )
 
-# Apply configuration button
-if st.sidebar.button("Apply Configuration"):
+target_schema = st.sidebar.slider(
+    "Target Schema Index",
+    min_value=0,
+    max_value=constants.PositionalConstants.Schema.Counts - 1,
+    value=config["target_schema_index"],
+    help="The schema index to use for item identification",
+    on_change=lambda: update_config({"target_schema_index": target_schema})
+)
+
+# Save configuration button
+if st.sidebar.button("Save Configuration"):
     new_config = {
         "lowest_price": lowest_price,
         "volume": volume,
         "screenshot_delay": screenshot_delay,
-        "debug_mode": debug_mode
+        "debug_mode": debug_mode,
+        "target_schema_index": target_schema
     }
     response = update_config(new_config)
     if response:
         st.sidebar.success("Configuration updated successfully!")
+        config = LocalConfig.model_validate(new_config)
+        config.to_file(constants.PathConstants.ConfigFile)
 
 # Main content area
 st.header("Bot Control")
@@ -219,7 +235,8 @@ This bot automatically purchases items when the price falls below your specified
 - Purchase volume: {} items
 - Screenshot delay: {} ms
 - Debug mode: {}
-""".format(lowest_price, volume, screenshot_delay, "Enabled" if debug_mode else "Disabled"))
+- Target schema index: {}
+""".format(lowest_price, volume, screenshot_delay, "Enabled" if debug_mode else "Disabled", target_schema))
 
 # How to use
 st.header("How to Use")

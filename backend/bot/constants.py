@@ -1,5 +1,7 @@
 from backend.util.position_adapter import PositionLike
 
+class PathConstants:
+    ConfigFile = "config.json"
 
 class PositionalConstants:
     DeveloperResolution = (2560, 1440)
@@ -15,6 +17,8 @@ class PositionalConstants:
             0: recently used schema
             1...: custom schemas
             """
+            if index < 0 or index >= PositionalConstants.Schema.Counts:
+                raise ValueError("Invalid schema button index")
             x, y = PositionalConstants.Schema.RecentButton
             y += index * PositionalConstants.Schema.ButtonInterval
             return x, y

@@ -12,7 +12,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: api",
+            "name": "API",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/backend/bot/api.py",
@@ -20,7 +20,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: api reload",
+            "name": "API reload",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/backend/bot/api.py",
@@ -31,11 +31,15 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python Debugger: web",
+            "name": "Web",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/web/streamlitUI.py",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/run_app.py",
+            "args": [
+                "--ui-only"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
         }
     ]
 }
