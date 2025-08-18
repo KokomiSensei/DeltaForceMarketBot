@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-from utils import *
-from adminAuth import is_admin, run_as_admin
-from logger import logger
+from backend.bot.constants import PositionalConstants
+from backend.util.position_adapter import mouse_click, mouse_move, get_windowshot
+from backend.bot.adminAuth import is_admin, run_as_admin
+from backend.bot.logger import logger
 import time
 import easyocr
 import numpy as np
@@ -16,39 +17,6 @@ class DefaultConfig:
     Volume = 3540
     DebugMode = False
 
-class PositionalConstants:
-    DeveloperResolution = (2560, 1440)
-    SmallScaleSchemaButton  = (266, 593)
-    SchemaButton = (261, 690)
-    PurchaseButton = (2257, 1154)
-    
-    PriceRangeTopLeft = (2200, 1150)
-    PriceRangeBottomRight = (2330, 1175)
-    
-    WarningRangeTopLeft = (1233, 989)
-    WarningRangeBottomRight = (1360, 1020)
-
-    @staticmethod
-    def get_mapped(coord, resolution = None):
-        if resolution is None:
-            resolution = PositionalConstants.DeveloperResolution
-        maxX, maxY = resolution
-        x, y = coord
-        x_ratio = maxX / PositionalConstants.DeveloperResolution[0]
-        y_ratio = maxY / PositionalConstants.DeveloperResolution[1]
-        return (int(x * x_ratio), int(y * y_ratio))
-    
-    @staticmethod
-    def to_ratio(range):
-        x, y = range
-        X, Y = PositionalConstants.DeveloperResolution
-        return x/X, y/Y
-    
-    @staticmethod
-    def to_ratio_range(coord1, coord2):
-        x1, y1 = PositionalConstants.to_ratio(coord1)
-        x2, y2 = PositionalConstants.to_ratio(coord2)
-        return (x1, y1, x2, y2)
 
 class OcrException(Exception):
     pass
@@ -117,7 +85,7 @@ class BuyBot:
         try:
             logger.debug("Running OCR on image")
             text = self.reader.readtext(np.array(img))
-            text = text[-1][1]
+            text = text[-1][1] # type: ignore
             text = text.replace(',', '')
             text = text.replace('.', '')
             text = text.replace(' ', '')
@@ -148,7 +116,7 @@ class BuyBot:
 
     def massive_purchase(self):
         avg_price = 9999999
-        schema_button_position = PositionalConstants.SmallScaleSchemaButton if self.debug_mode else PositionalConstants.SchemaButton
+        schema_button_position = PositionalConstants.Schema.Button(3) if self.debug_mode else PositionalConstants.Schema.Button(4)
         while True:
             if not self.controller.running:
                 logger.debug("Controller not running, exiting massive_purchase")

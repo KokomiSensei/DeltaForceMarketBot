@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 if __name__ == '__main__':
-    from utils import *
+    from backend.utils import *
 else:
     from backend.utils import *
 import time

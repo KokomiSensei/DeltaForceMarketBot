@@ -21,7 +21,7 @@ def start_streamlit_ui():
     """Start the Streamlit UI"""
     print("Starting Streamlit UI...")
     streamlit_process = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", "backend/streamlitUI.py", "--server.port", "8501"],
+        [sys.executable, "-m", "streamlit", "run", "backend/web/streamlitUI.py", "--server.port", "8501"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )

@@ -1,15 +1,15 @@
 import json
 import sys
+import threading
+import time
+import argparse
 from fastapi import FastAPI, HTTPException
 import keyboard
 from pydantic import BaseModel
 import uvicorn
-import threading
-import time
 from typing import Dict, Optional
-from backend import controller
-from buyBot2 import BuyBot, DefaultConfig
-from logger import logger
+from backend.bot.buyBot2 import BuyBot, DefaultConfig
+from backend.bot.logger import logger
 
 # FastAPI app
 app = FastAPI(title="DeltaForce Market Bot API")
@@ -90,20 +90,27 @@ def update_config(config: BotConfig):
     logger.info(f"Configuration updated: {config.dict(exclude_unset=True)}")
     return {"message": "Configuration updated successfully"}
 
-def run_api_server(host="127.0.0.1", port=8000):
+def run_api_server(host="127.0.0.1", port=8000, reload=False):
     """Run the FastAPI server"""
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run('api:app', host=host, port=port, reload=reload)
 
 if __name__ == "__main__":
     try:
-        from adminAuth import is_admin, run_as_admin
+        parser = argparse.ArgumentParser(description="DeltaForce Market Bot API Server")
+        parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
+        args = parser.parse_args()
+
+        from backend.bot.adminAuth import is_admin, run_as_admin
         if not is_admin():
             logger.info("Requesting administrator privileges...")
             run_as_admin()
-            # Set up keyboard hotkeys
-        keyboard.add_hotkey('f8', start_bot)
-        keyboard.add_hotkey('f9', stop_bot)
-        run_api_server()
+
+        # Set up keyboard hotkeys
+        keyboard.add_hotkey('f8', start_bot) # type: ignore
+        keyboard.add_hotkey('f9', stop_bot) # type: ignore
+
+        # 运行API服务器
+        run_api_server(reload=args.reload)
     except Exception as e:
         logger.error(f"Error occurred while running API server: {e}")
     input("Press Enter to exit...")

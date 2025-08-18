@@ -6,7 +6,7 @@ import os
 import sys
 import subprocess
 from threading import Thread
-from buyBot2 import DefaultConfig
+from backend.bot.buyBot2 import DefaultConfig
 import socket
 
 # Add API server URL

@@ -1,5 +1,5 @@
 
-from backend.buyBot2 import BuyBot
+from backend.bot.buyBot2 import BuyBot
 
 class BotController:
     def __init__(self, bot: BuyBot) -> None:

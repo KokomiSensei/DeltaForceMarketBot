@@ -7,7 +7,8 @@ import os
 def setup_logging():
     """设置应用程序日志系统"""
     # 创建logs目录（如果不存在）
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+    # logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+    logs_dir = os.path.join("./", 'logs')
     os.makedirs(logs_dir, exist_ok=True)
     
     # 创建并配置logger
