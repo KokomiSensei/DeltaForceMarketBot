@@ -131,8 +131,12 @@ class BuyBot:
                 logger.error(f"Error identifying price: {e}")
                 return
             logger.debug("Pressing ESC and L keys")
-            pyautogui.press('esc')
-            pyautogui.press('l')
+            # TODO: 好像不需要退出去，直接切换方案就能刷新价格。不确定
+            # 退出去
+            # pyautogui.press('esc')
+            # pyautogui.press('l')
+            # 直接点另一个方案
+            mouse_click(PositionalConstants.to_ratio(PositionalConstants.Schema.Button(0)))
             mouse_click(PositionalConstants.to_ratio(schema_button_position))
 
         logger.info(f"Found good price! Average: {avg_price:.2f} < {self.lowest_price}")
