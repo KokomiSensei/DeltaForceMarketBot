@@ -5,7 +5,7 @@ from backend.bot.constants import PositionalConstants
 from backend.util.position_adapter import mouse_click, mouse_move, get_windowshot
 from backend.bot.adminAuth import is_admin, run_as_admin
 from backend.bot.logger import logger
-from backend.bot.config import DefaultConfig, LocalConfig
+from backend.bot.config import DefaultConfig, LocalConfig, MultiConfig
 
 import time
 import easyocr
@@ -73,10 +73,11 @@ class BuyBot:
     def __init__(self):
         logger.info("Initializing BuyBot")
         self.reader = easyocr.Reader(['en'], gpu=True)
-        self.config = LocalConfig.from_file(constants.PathConstants.ConfigFile)
+        # Use the active configuration
+        self.config = MultiConfig.get_active_config(constants.PathConstants.ConfigFile)
         self.controller = BuyBot.BotController(self)
-        logger.debug("BuyBot initialized with lowest_price=%s, volume=%s, screenshot_delay=%s", 
-                    self.config.lowest_price, self.config.volume, self.config.screenshot_delay)
+        logger.debug("BuyBot initialized with config '%s', lowest_price=%s, volume=%s, screenshot_delay=%s", 
+                    self.config.name, self.config.lowest_price, self.config.volume, self.config.screenshot_delay)
 
     def identify_number(self, img):
         try:

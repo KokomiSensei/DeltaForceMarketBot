@@ -7,9 +7,10 @@ from fastapi import FastAPI, HTTPException
 import keyboard
 from pydantic import BaseModel
 import uvicorn
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from backend.bot.buyBot2 import BuyBot
-from backend.bot.config import DefaultConfig
+from backend.bot.config import DefaultConfig, LocalConfig, MultiConfig
+from backend.bot import constants
 from backend.bot.logger import logger
 
 # FastAPI app
@@ -35,16 +36,25 @@ class BotConfig(BaseModel):
     screenshot_delay: Optional[int] = DefaultConfig.screenshot_delay
     debug_mode: Optional[bool] = DefaultConfig.debug_mode
     target_schema_index: Optional[int] = DefaultConfig.target_schema_index
+    config_name: Optional[str] = None
 
 class BotStatus(BaseModel):
     running: bool
     config: Dict
+    active_config_name: Optional[str] = None
+    available_configs: Optional[list] = None
 
 # API Routes
 @app.get("/status")
 def get_status():
     """Get current bot status and configuration"""
     bot = get_bot_instance()
+    
+    # Get all available configs
+    configs = MultiConfig.load_configs(constants.PathConstants.ConfigFile)
+    config_names = [config.name for config in configs]
+    active_config = MultiConfig.get_active_config(constants.PathConstants.ConfigFile)
+    
     return {
         "running": bot.controller.running,
         "config": {
@@ -53,7 +63,9 @@ def get_status():
             "screenshot_delay": bot.config.screenshot_delay,
             "debug_mode": bot.config.debug_mode,
             "target_schema_index": bot.config.target_schema_index
-        }
+        },
+        "active_config_name": active_config.name,
+        "available_configs": config_names
     }
 
 @app.post("/start")
@@ -81,6 +93,7 @@ def update_config(config: BotConfig):
     """Update bot configuration"""
     bot = get_bot_instance()
     
+    # Update bot instance config
     if config.lowest_price is not None:
         bot.config.lowest_price = config.lowest_price
     if config.volume is not None:
@@ -91,9 +104,78 @@ def update_config(config: BotConfig):
         bot.config.debug_mode = config.debug_mode
     if config.target_schema_index is not None:
         bot.config.target_schema_index = config.target_schema_index
-
-    logger.info(f"Configuration updated: {config.dict(exclude_unset=True)}")
+    
+    # If a config name is provided, update the named config and set it as active
+    if config.config_name is not None:
+        # Get all configs
+        configs = MultiConfig.load_configs(constants.PathConstants.ConfigFile)
+        found = False
+        
+        # Look for the named config
+        for i, cfg in enumerate(configs):
+            if cfg.name == config.config_name:
+                # Update the config with the new values
+                if config.lowest_price is not None:
+                    configs[i].lowest_price = config.lowest_price
+                if config.volume is not None:
+                    configs[i].volume = config.volume
+                if config.screenshot_delay is not None:
+                    configs[i].screenshot_delay = config.screenshot_delay
+                if config.debug_mode is not None:
+                    configs[i].debug_mode = config.debug_mode
+                if config.target_schema_index is not None:
+                    configs[i].target_schema_index = config.target_schema_index
+                found = True
+                break
+        
+        if found:
+            # Save all configs back to file
+            MultiConfig.save_configs(configs, constants.PathConstants.ConfigFile)
+            # Set this config as active
+            MultiConfig.set_active_config(config.config_name, constants.PathConstants.ConfigFile)
+        else:
+            logger.warning(f"Config '{config.config_name}' not found")
+    
+    logger.info(f"Configuration updated: {config.model_dump(exclude_unset=True)}")
     return {"message": "Configuration updated successfully"}
+
+@app.get("/configs")
+def get_configs():
+    """Get all available configurations"""
+    configs = MultiConfig.load_configs(constants.PathConstants.ConfigFile)
+    active_config = MultiConfig.get_active_config(constants.PathConstants.ConfigFile)
+    
+    return {
+        "configs": [config.model_dump() for config in configs],
+        "active_config_name": active_config.name
+    }
+
+@app.post("/configs/activate/{config_name}")
+def activate_config(config_name: str):
+    """Set a configuration as active"""
+    configs = MultiConfig.load_configs(constants.PathConstants.ConfigFile)
+    
+    # Check if config exists
+    config_exists = any(config.name == config_name for config in configs)
+    if not config_exists:
+        return {"message": f"Configuration '{config_name}' not found", "success": False}
+    
+    # Set as active
+    MultiConfig.set_active_config(config_name, constants.PathConstants.ConfigFile)
+    
+    # Find the config to update bot instance
+    bot = get_bot_instance()
+    for config in configs:
+        if config.name == config_name:
+            bot.config.lowest_price = config.lowest_price
+            bot.config.volume = config.volume
+            bot.config.screenshot_delay = config.screenshot_delay
+            bot.config.debug_mode = config.debug_mode
+            bot.config.target_schema_index = config.target_schema_index
+            break
+    
+    logger.info(f"Activated configuration: {config_name}")
+    return {"message": f"Configuration '{config_name}' activated", "success": True}
 
 def run_api_server(host="127.0.0.1", port=8000, reload=False):
     """Run the FastAPI server"""
