@@ -1,25 +1,22 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
-from backend.bot import constants
-from backend.bot.constants import PositionalConstants
-from backend.util.position_adapter import mouse_click, mouse_move, get_windowshot
-from backend.bot.adminAuth import is_admin, run_as_admin
-from backend.bot.logger import logger
-from backend.bot.config import DefaultConfig, LocalConfig, MultiConfig
 
+import threading
 import time
-import easyocr
+
+import keyboard
 import numpy as np
 import pyautogui
-import keyboard
-import threading
 
-
-
+from backend.bot.config import BotConfig
+from backend.bot.constants import PositionalConstants
+from backend.util.adminAuth import is_admin, run_as_admin
+from backend.util.logger import logger
+from backend.util.position_adapter import get_windowshot, mouse_click, mouse_move
 
 
 class OcrException(Exception):
     pass
+
 
 class BuyBot:
     class BotController:
@@ -28,65 +25,75 @@ class BuyBot:
             self.running = False
             self.should_exit = False
             self.bot_thread = None
-        
+
         def start_bot(self):
             """Start the bot in a separate thread if it's not already running"""
             if self.running:
                 logger.warning("Bot is already running!")
                 return
-            
+
             self.running = True
             logger.info("Bot started! Press F9 to stop.")
             self.bot_thread = threading.Thread(target=self._bot_loop)
             self.bot_thread.daemon = True
             self.bot_thread.start()
-        
+
         def stop_bot(self):
             """Signal the bot to stop"""
             if not self.running:
                 logger.warning("Bot is not running!")
                 return
-            
+
             logger.info("Stopping bot...")
             self.running = False
             if self.bot_thread and self.bot_thread.is_alive():
                 self.bot_thread.join(timeout=2.0)
             logger.info("Bot stopped.")
-        
+
         def exit(self):
             """Signal the controller to exit the main loop"""
             self.should_exit = True
             self.stop_bot()
             logger.info("Exit requested.")
-        
+
         def _bot_loop(self):
             """The main bot execution loop that runs in a separate thread"""
             try:
                 while self.running:
                     self.bot.massive_purchase()
-                    logger.info('massive_purchase returned')
+                    logger.info("massive_purchase returned")
                     time.sleep(5)  # Small delay to prevent CPU overuse
             except Exception as e:
                 logger.error("Error in bot thread: %s", str(e), exc_info=True)
                 self.running = False
-                
-    def __init__(self):
+
+    def __init__(self, skip_bot_model):
         logger.info("Initializing BuyBot")
-        self.reader = easyocr.Reader(['en'], gpu=True)
+        if not skip_bot_model:
+            import easyocr
+
+            self.reader = easyocr.Reader(["en"], gpu=True)
+        else:
+            self.reader = None
         # Use the active configuration
-        self.config = MultiConfig.get_active_config(constants.PathConstants.ConfigFile)
+        self.config = BotConfig()
         self.controller = BuyBot.BotController(self)
-        logger.debug("BuyBot initialized with config '%s', lowest_price=%s, volume=%s, screenshot_delay=%s", 
-                    self.config.name, self.config.lowest_price, self.config.volume, self.config.screenshot_delay)
+        logger.debug(
+            "BuyBot initialized with config '%s', lowest_price=%s, volume=%s, screenshot_delay=%s",
+            self.config.name,
+            self.config.lowest_price,
+            self.config.volume,
+            self.config.screenshot_delay,
+        )
 
     def identify_number(self, img):
         try:
             logger.debug("Running OCR on image")
             text = self.reader.readtext(np.array(img))
-            text = text[-1][1] # type: ignore
-            text = text.replace(',', '')
-            text = text.replace('.', '')
-            text = text.replace(' ', '')
+            text = text[-1][1]  # type: ignore
+            text = text.replace(",", "")
+            text = text.replace(".", "")
+            text = text.replace(" ", "")
             result = int(text)
             logger.debug("OCR result: %s", result)
             return result
@@ -98,16 +105,20 @@ class BuyBot:
         if self.config.screenshot_delay > 0:
             time.sleep(self.config.screenshot_delay / 1000.0)
         logger.debug("Taking screenshot for price identification")
-        img = get_windowshot(PositionalConstants.to_ratio_range(PositionalConstants.PriceRangeTopLeft, PositionalConstants.PriceRangeBottomRight))
+        img = get_windowshot(
+            PositionalConstants.to_ratio_range(PositionalConstants.PriceRangeTopLeft, PositionalConstants.PriceRangeBottomRight),
+        )
         total_price = self.identify_number(img)
         logger.debug("Identified total price: %s", total_price)
         return total_price
-    
+
     def identify_warning(self):
         if self.config.screenshot_delay > 0:
             time.sleep(self.config.screenshot_delay / 1000.0)
         logger.debug("Taking screenshot for warning identification")
-        img = get_windowshot(PositionalConstants.to_ratio_range(PositionalConstants.WarningRangeTopLeft, PositionalConstants.WarningRangeBottomRight))
+        img = get_windowshot(
+            PositionalConstants.to_ratio_range(PositionalConstants.WarningRangeTopLeft, PositionalConstants.WarningRangeBottomRight),
+        )
         warning_price = self.identify_number(img)
         logger.debug("Identified warning price: %s", warning_price)
         return warning_price
@@ -122,7 +133,9 @@ class BuyBot:
             try:
                 total_price = self.identify_price()
                 avg_price = (total_price / self.config.volume) if self.config.volume > 0 else total_price
-                logger.info(f"Total price: {total_price} / Volume: {self.config.volume} = Avg price: {avg_price:.2f}, Lowest: {self.config.lowest_price}")
+                logger.info(
+                    f"Total price: {total_price} / Volume: {self.config.volume} = Avg price: {avg_price:.2f}, Lowest: {self.config.lowest_price}",
+                )
                 if avg_price <= self.config.lowest_price:
                     break
             except OcrException as e:
@@ -149,8 +162,8 @@ class BuyBot:
             warning_price = self.identify_warning()
             if warning_price > self.config.lowest_price:
                 logger.warning(f"Warning price: {warning_price} > Lowest price: {self.config.lowest_price}")
-                pyautogui.press('esc')
-                pyautogui.press('l')
+                pyautogui.press("esc")
+                pyautogui.press("l")
                 mouse_click(PositionalConstants.to_ratio(schema_button_position))
             else:
                 mouse_click(PositionalConstants.to_ratio(PositionalConstants.WarningRangeTopLeft))
@@ -159,32 +172,31 @@ class BuyBot:
             logger.info("Probably made a successful purchase!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if not is_admin():
         logger.info("Requesting administrator privileges...")
         run_as_admin()
-    
+
     logger.info("Starting BuyBot application")
     buy_bot = BuyBot()
     controller = buy_bot.controller
 
     # Set up keyboard hotkeys
-    keyboard.add_hotkey('f8', controller.start_bot)
-    keyboard.add_hotkey('f9', controller.stop_bot)
-    keyboard.add_hotkey('f7', controller.exit)
-    
+    keyboard.add_hotkey("f8", controller.start_bot)
+    keyboard.add_hotkey("f9", controller.stop_bot)
+    keyboard.add_hotkey("f7", controller.exit)
+
     logger.info("Bot controller ready!")
     logger.info("Press F8 to start the bot")
     logger.info("Press F9 to stop the bot")
     logger.info("Press F7 to exit the program")
-    
+
     # Main loop that just waits for keyboard events
     try:
         while not controller.should_exit:
             time.sleep(0.1)  # Small delay to prevent CPU overuse
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received, exiting")
-        pass
     finally:
         controller.stop_bot()
         logger.info("Program exited.")

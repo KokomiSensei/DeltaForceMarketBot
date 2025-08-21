@@ -40,6 +40,14 @@
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
-        }
+        },
+        {
+            "name": "run.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "backend/run.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
     ]
 }

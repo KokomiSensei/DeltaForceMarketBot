@@ -39,7 +39,15 @@
             "debug_mode": true,
             "target_schema_index": 2,
             "name": "temp"
+        },
+        {
+            "lowest_price": 284,
+            "volume": 6,
+            "screenshot_delay": 11,
+            "debug_mode": true,
+            "target_schema_index": 58,
+            "name": "123"
         }
     ],
-    "active_config_name": "9x19-4"
+    "active_config_name": ".45 RIP-1"
 }

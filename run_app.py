@@ -1,9 +1,8 @@
+import argparse
 import subprocess
 import sys
 import time
-import webbrowser
-import threading
-import argparse
+
 
 def start_api_server():
     """Start the FastAPI backend server"""
@@ -11,11 +10,12 @@ def start_api_server():
     api_process = subprocess.Popen(
         [sys.executable, "backend/api.py"],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
     # Wait briefly to let the API server start
     time.sleep(2)
     return api_process
+
 
 def start_streamlit_ui():
     """Start the Streamlit UI"""
@@ -23,7 +23,7 @@ def start_streamlit_ui():
     streamlit_process = subprocess.Popen(
         [sys.executable, "-m", "streamlit", "run", "backend/web/streamlitUI.py", "--server.port", "8501"],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
+        stderr=subprocess.PIPE,
     )
     return streamlit_process
 
@@ -36,6 +36,7 @@ def show_help():
     print("python run_app.py --api-only : Run only the API server (port 8000)")
     print("python run_app.py --ui-only  : Run only the Streamlit UI (port 8501)")
     print("python run_app.py --help     : Show this help message\n")
+
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -64,7 +65,7 @@ if __name__ == "__main__":
             print("\nShutting down API server...")
             api_process.terminate()
             print("API server stopped.")
-    
+
     elif args.ui_only:
         # Start Streamlit UI only
         streamlit_process = start_streamlit_ui()
@@ -76,13 +77,12 @@ if __name__ == "__main__":
             print("\nShutting down Streamlit UI...")
             streamlit_process.terminate()
             print("Streamlit UI stopped.")
-    
+
     else:
         # Start both API server and Streamlit UI (default behavior)
         api_process = start_api_server()
         streamlit_process = start_streamlit_ui()
 
-        
         try:
             # Wait for the processes to complete (which they won't unless killed)
             print("Application running! Access the UI at http://localhost:8501")

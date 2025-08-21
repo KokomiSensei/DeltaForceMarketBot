@@ -1,6 +1,7 @@
-import sys
-import os
 import ctypes
+import os
+import sys
+
 
 def is_admin():
     try:
@@ -8,14 +9,13 @@ def is_admin():
     except:
         return False
 
+
 def run_as_admin():
     script = os.path.abspath(sys.argv[0])
-    params = ' '.join(sys.argv[1:])
+    params = " ".join(sys.argv[1:])
 
-    if script == 'python.exe' or script == 'python':
+    if script == "python.exe" or script == "python":
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script}" {params}', None, 1)
     else:
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script}" -m {params}', None, 1)
     sys.exit(0)
-
-

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Form implementation generated from reading ui file 'c:\Users\18233\Documents\GitHub\DeltaForceMarketBot\GUI\AppGUI.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.9
@@ -11,7 +9,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
-class Ui_MainWindow(object):
+class Ui_MainWindow:
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(449, 218)
@@ -139,14 +137,14 @@ class Ui_MainWindow(object):
         cursor = textEdit.textCursor()
         pos = cursor.position()
         old_text = textEdit.toPlainText()
-        raw_text = old_text.replace(',', '')
+        raw_text = old_text.replace(",", "")
         if not raw_text.isdigit():
             return
-        formatted = "{:,}".format(int(raw_text))
+        formatted = f"{int(raw_text):,}"
         if formatted == old_text:
             return
-        old_commas_before_cursor = old_text[:pos].count(',')
-        new_commas_before_cursor = formatted[:pos].count(',')
+        old_commas_before_cursor = old_text[:pos].count(",")
+        new_commas_before_cursor = formatted[:pos].count(",")
         delta = new_commas_before_cursor - old_commas_before_cursor
         textEdit.blockSignals(True)
         textEdit.setPlainText(formatted)
