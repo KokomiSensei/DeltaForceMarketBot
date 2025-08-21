@@ -6,22 +6,41 @@ import { ConfigSidebar } from "@/components/config-sidebar"
 import { ConfigDetailPanel } from "@/components/config-detail-panel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { BotConfig } from "@/types/bot-config"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog"
+import type { BotConfig, BotConfigOpt } from "@/types/bot-config"
 import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
-import { Bot, Settings } from "lucide-react"
+import { Bot, Settings, Save } from "lucide-react"
 
 export default function HomePage() {
   const [currentConfig, setCurrentConfig] = useState<BotConfig | null>(null)
   const [selectedConfig, setSelectedConfig] = useState<BotConfig | null>(null)
+  const [tempConfig, setTempConfig] = useState<BotConfigOpt | null>(null)
+  const [isDirty, setIsDirty] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [loading, setLoading] = useState(true)
   const [configKey, setConfigKey] = useState(0) // Force re-render of sidebar
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
+  const [isSaveAsDialogOpen, setIsSaveAsDialogOpen] = useState(false)
+  const [newConfigName, setNewConfigName] = useState("")
   const { toast } = useToast()
 
   useEffect(() => {
     loadCurrentConfig()
   }, [])
+
+  // Initialize tempConfig when currentConfig changes
+  useEffect(() => {
+    if (currentConfig) {
+      setTempConfig(currentConfig)
+      setIsDirty(false)
+    }
+  }, [currentConfig])
 
   const loadCurrentConfig = async () => {
     try {
@@ -39,10 +58,116 @@ export default function HomePage() {
     loadCurrentConfig()
   }
 
+  // Handle changes to temporary configuration
+  const handleTempConfigChange = (field: keyof BotConfigOpt, value: any) => {
+    if (!tempConfig || !currentConfig) return
+
+    const updatedConfig = { ...tempConfig, [field]: value }
+    setTempConfig(updatedConfig)
+
+    // Check if any field is different from the current config
+    const isDifferent = Object.keys(updatedConfig).some((key) => {
+      const k = key as keyof BotConfigOpt
+      return updatedConfig[k] !== currentConfig[k as keyof BotConfig]
+    })
+
+    setIsDirty(isDifferent)
+  }
+
+  // Apply temporary configuration to the bot
+  const handleApplyTempConfig = async () => {
+    if (!tempConfig || !isDirty) return
+
+    try {
+      await apiClient.setBotConfig(tempConfig as BotConfig)
+
+      // Check if name has changed, which requires a save as operation
+      if (tempConfig.name !== currentConfig?.name) {
+        setIsSaveAsDialogOpen(true)
+        setNewConfigName(tempConfig.name || "")
+      } else {
+        // Name hasn't changed, just load the new config
+        await loadCurrentConfig()
+        setIsDirty(false)
+
+        toast({
+          title: "Success",
+          description: "Bot configuration applied successfully.",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to apply configuration.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle saving the current configuration
+  const handleSaveConfig = async () => {
+    if (!tempConfig || !currentConfig) return
+
+    try {
+      // If name is the same, update the existing config
+      if (tempConfig.name === currentConfig.name) {
+        await apiClient.updateConfig(currentConfig.name, tempConfig as BotConfig)
+        toast({
+          title: "Success",
+          description: "Configuration saved successfully.",
+        })
+      } else {
+        // If name is different, create a new config
+        await apiClient.createConfig(tempConfig as BotConfig)
+        toast({
+          title: "Success",
+          description: "New configuration created successfully.",
+        })
+      }
+
+      setIsSaveDialogOpen(false)
+      setIsDirty(false)
+      handleConfigChange() // Refresh configs list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save configuration.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle saving the config with a new name
+  const handleSaveAsConfig = async () => {
+    if (!tempConfig) return
+
+    try {
+      const configToSave = { ...tempConfig, name: newConfigName }
+      await apiClient.createConfig(configToSave as BotConfig)
+
+      toast({
+        title: "Success",
+        description: "New configuration created successfully.",
+      })
+
+      setIsSaveAsDialogOpen(false)
+      setIsDirty(false)
+      handleConfigChange() // Refresh configs list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save configuration.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleSetConfig = async (config: BotConfig) => {
     try {
       const updatedConfig = await apiClient.setBotConfig(config)
       setCurrentConfig(updatedConfig)
+      setTempConfig(updatedConfig)
+      setIsDirty(false)
       toast({
         title: "Success",
         description: "Bot configuration updated successfully.",
@@ -138,35 +263,117 @@ export default function HomePage() {
 
                 {currentConfig && (
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Current Active Configuration</CardTitle>
-                      <CardDescription>Settings currently being used by the bot</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <div>
+                        <CardTitle>Current Active Configuration</CardTitle>
+                        <CardDescription>Adjust and apply settings to the bot</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleApplyTempConfig}
+                          // disabled={!isDirty || !tempConfig}
+                        >
+                          Apply Changes
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            // If name is changed, open Save As dialog, otherwise open Save dialog
+                            if (tempConfig?.name !== currentConfig?.name) {
+                              setNewConfigName(tempConfig?.name || "")
+                              setIsSaveAsDialogOpen(true)
+                            } else {
+                              setIsSaveDialogOpen(true)
+                            }
+                          }}
+                          // disabled={!isDirty || !tempConfig}
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex justify-between">
-                          <span className="font-medium">Name:</span>
-                          <span>{currentConfig.name}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Basic Settings */}
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="config-name">Configuration Name</Label>
+                            <Input
+                              id="config-name"
+                              value={tempConfig?.name || currentConfig.name}
+                              onChange={(e) => handleTempConfigChange('name', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="lowest-price">Lowest Price</Label>
+                            <Input
+                              id="lowest-price"
+                              type="number"
+                              value={tempConfig?.lowest_price ?? currentConfig.lowest_price}
+                              onChange={(e) => handleTempConfigChange('lowest_price', Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="volume">Volume</Label>
+                            <Input
+                              id="volume"
+                              type="number"
+                              value={tempConfig?.volume ?? currentConfig.volume}
+                              onChange={(e) => handleTempConfigChange('volume', Number(e.target.value))}
+                            />
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Lowest Price:</span>
-                          <span>{currentConfig.lowest_price}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Volume:</span>
-                          <span>{currentConfig.volume}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Screenshot Delay:</span>
-                          <span>{currentConfig.screenshot_delay}ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Debug Mode:</span>
-                          <span>{currentConfig.debug_mode ? "Enabled" : "Disabled"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Schema Index:</span>
-                          <span>{currentConfig.target_schema_index}</span>
+
+                        {/* Advanced Settings */}
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="screenshot-delay">Screenshot Delay (ms)</Label>
+                            <Input
+                              id="screenshot-delay"
+                              type="number"
+                              value={tempConfig?.screenshot_delay ?? currentConfig.screenshot_delay}
+                              onChange={(e) => handleTempConfigChange('screenshot_delay', Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <Label htmlFor="debug-mode" className="cursor-pointer">Debug Mode</Label>
+                              <Switch
+                                id="debug-mode"
+                                checked={tempConfig?.debug_mode ?? currentConfig.debug_mode}
+                                onCheckedChange={(checked) => handleTempConfigChange('debug_mode', checked)}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div>
+                              <div className="flex justify-between">
+                                <Label htmlFor="schema-index">Target Schema Index</Label>
+                                <span className="text-sm text-muted-foreground">
+                                  {tempConfig?.target_schema_index ?? currentConfig.target_schema_index}
+                                </span>
+                              </div>
+                              <Slider
+                                id="schema-index"
+                                min={0}
+                                max={4}
+                                step={1}
+                                value={[(tempConfig?.target_schema_index ?? currentConfig.target_schema_index)]}
+                                onValueChange={(value) => handleTempConfigChange('target_schema_index', value[0])}
+                                className="py-4"
+                              />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>0</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -177,6 +384,52 @@ export default function HomePage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Save Dialog */}
+      <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Configuration</DialogTitle>
+            <DialogDescription>
+              Do you want to save the current changes to the configuration?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Your changes will be saved to the configuration "{tempConfig?.name}".</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveConfig}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save As Dialog */}
+      <Dialog open={isSaveAsDialogOpen} onOpenChange={setIsSaveAsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save As New Configuration</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new configuration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-config-name">Configuration Name</Label>
+              <Input
+                id="new-config-name"
+                value={newConfigName}
+                onChange={(e) => setNewConfigName(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSaveAsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAsConfig} disabled={!newConfigName}>Save As</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
