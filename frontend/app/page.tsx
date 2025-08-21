@@ -218,7 +218,7 @@ export default function HomePage() {
             </div>
 
             {/* Current Config Status */}
-            {currentConfig && (
+            {/* {currentConfig && (
               <Card className="w-64">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">Active Configuration</CardTitle>
@@ -233,7 +233,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            )} */}
           </div>
         </div>
       </div>
@@ -281,7 +281,7 @@ export default function HomePage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <div>
-                        <CardTitle>Current Active Configuration</CardTitle>
+                        <CardTitle>Current Active Configuration: { currentConfig.name }</CardTitle>
                         <CardDescription>Adjust and apply settings to the bot</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
@@ -315,14 +315,14 @@ export default function HomePage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Basic Settings */}
                         <div className="space-y-4">
-                          <div className="space-y-1.5">
+                          {/* <div className="space-y-1.5">
                             <Label htmlFor="config-name">Configuration Name</Label>
                             <Input
                               id="config-name"
                               value={tempConfig?.name || currentConfig.name}
                               onChange={(e) => handleTempConfigChange('name', e.target.value)}
                             />
-                          </div>
+                          </div> */}
                           <div className="space-y-1.5">
                             <Label htmlFor="lowest-price">Lowest Price</Label>
                             <Input

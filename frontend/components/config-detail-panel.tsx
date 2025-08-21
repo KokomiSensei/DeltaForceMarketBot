@@ -102,7 +102,7 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
 
   if (!selectedConfig) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center my-20">
         <div className="text-center space-y-4">
           <Settings className="h-16 w-16 mx-auto text-muted-foreground" />
           <div>
