@@ -25,6 +25,7 @@ export default function HomePage() {
   const [isRunning, setIsRunning] = useState(false)
   const [loading, setLoading] = useState(true)
   const [configKey, setConfigKey] = useState(0) // Force re-render of sidebar
+  const [activeTab, setActiveTab] = useState("config") // Track active tab - config or control
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
   const [isSaveAsDialogOpen, setIsSaveAsDialogOpen] = useState(false)
   const [newConfigName, setNewConfigName] = useState("")
@@ -56,6 +57,16 @@ export default function HomePage() {
   const handleConfigChange = () => {
     setConfigKey((prev) => prev + 1)
     loadCurrentConfig()
+  }
+
+  // Handle sidebar config selection based on active tab
+  const handleSelectConfig = (config: BotConfig) => {
+    setSelectedConfig(config)
+
+    // If we're on the Control Panel tab, also load this config to the bot
+    if (activeTab === "control") {
+      handleSetConfig(config)
+    }
   }
 
   // Handle changes to temporary configuration
@@ -233,13 +244,18 @@ export default function HomePage() {
         <ConfigSidebar
           key={configKey}
           selectedConfig={selectedConfig}
-          onSelectConfig={setSelectedConfig}
+          onSelectConfig={handleSelectConfig}
           onConfigChange={handleConfigChange}
         />
 
         {/* Main Panel */}
         <div className="flex-1 flex flex-col">
-          <Tabs defaultValue="config" className="flex-1 flex flex-col">
+          <Tabs
+            defaultValue="config"
+            className="flex-1 flex flex-col"
+            value={activeTab}
+            onValueChange={setActiveTab}
+          >
             <div className="border-b px-6 py-2">
               <TabsList>
                 <TabsTrigger value="config" className="flex items-center gap-2">
@@ -273,7 +289,7 @@ export default function HomePage() {
                           variant="outline"
                           size="sm"
                           onClick={handleApplyTempConfig}
-                          // disabled={!isDirty || !tempConfig}
+                          disabled={!isDirty || !tempConfig}
                         >
                           Apply Changes
                         </Button>
@@ -289,7 +305,7 @@ export default function HomePage() {
                               setIsSaveDialogOpen(true)
                             }
                           }}
-                          // disabled={!isDirty || !tempConfig}
+                          disabled={!isDirty || !tempConfig}
                         >
                           Save
                         </Button>
