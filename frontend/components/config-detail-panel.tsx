@@ -167,6 +167,10 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
               <span className="font-medium">Volume</span>
               <span className="text-muted-foreground">{selectedConfig.volume}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Target Schema Index</span>
+              <span className="text-muted-foreground">{selectedConfig.target_schema_index}</span>
+            </div>
           </CardContent>
         </Card>
 
@@ -179,10 +183,6 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
             <div className="flex justify-between items-center">
               <span className="font-medium">Screenshot Delay</span>
               <span className="text-muted-foreground">{selectedConfig.screenshot_delay}ms</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Target Schema Index</span>
-              <span className="text-muted-foreground">{selectedConfig.target_schema_index}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-medium">Debug Mode</span>

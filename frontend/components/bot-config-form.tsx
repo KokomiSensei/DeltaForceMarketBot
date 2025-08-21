@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { BotConfig, BotConfigOpt } from "@/types/bot-config"
 
@@ -95,14 +96,26 @@ export function BotConfigForm({ config, onSubmit, isPartialUpdate = false, loadi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="target_schema_index">Target Schema Index</Label>
-              <Input
+              <div className="flex justify-between">
+                <Label htmlFor="target_schema_index">Target Schema Index</Label>
+                <span className="text-sm text-muted-foreground">{formData.target_schema_index}</span>
+              </div>
+              <Slider
                 id="target_schema_index"
-                type="number"
-                value={formData.target_schema_index || ""}
-                onChange={(e) => handleInputChange("target_schema_index", Number.parseInt(e.target.value) || 0)}
-                placeholder="Enter schema index"
+                min={0}
+                max={4}
+                step={1}
+                value={[formData.target_schema_index || 0]}
+                onValueChange={(value) => handleInputChange("target_schema_index", value[0])}
+                className="py-4"
               />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>0</span>
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
