@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Settings, Plus } from "lucide-react"
-import type { BotConfig } from "@/types/bot-config"
+import type { BotConfig, BotConfigOpt } from "@/types/bot-config"
 import { apiClient } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { BotConfigForm } from "./bot-config-form"
@@ -29,12 +29,14 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  const handleUpdateConfig = async (config: BotConfig) => {
+  const handleUpdateConfig = async (config: BotConfig | BotConfigOpt) => {
     if (!selectedConfig) return
 
     setLoading(true)
     try {
-      await apiClient.updateConfig(selectedConfig.name, config)
+      // 确保这是一个完整的 BotConfig 对象
+      const fullConfig = config as BotConfig
+      await apiClient.updateConfig(selectedConfig.name, fullConfig)
       onConfigUpdate()
       setIsEditing(false)
       toast({
@@ -52,10 +54,12 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
     }
   }
 
-  const handleCreateConfig = async (config: BotConfig) => {
+  const handleCreateConfig = async (config: BotConfig | BotConfigOpt) => {
     setLoading(true)
     try {
-      await apiClient.createConfig(config)
+      // 确保这是一个完整的 BotConfig 对象
+      const fullConfig = config as BotConfig
+      await apiClient.createConfig(fullConfig)
       onConfigUpdate()
       setIsCreating(false)
       toast({
@@ -79,6 +83,8 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
     setLoading(true)
     try {
       await apiClient.setBotConfig(selectedConfig)
+      // 通知父组件更新当前配置
+      onConfigUpdate()
       toast({
         title: "Success",
         description: "Configuration set as active.",
@@ -138,7 +144,7 @@ export function ConfigDetailPanel({ selectedConfig, onConfigUpdate }: ConfigDeta
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleSetAsActive} disabled={loading}>
-            Set as Active
+            Load Config
           </Button>
           <Button onClick={() => setIsEditing(true)}>
             <Settings className="h-4 w-4 mr-2" />
