@@ -47,6 +47,8 @@ class ConfigService(Monitor):
     def update_config(self, config_name: str, config: BotConfig):
         if not self.dao.contains(config_name):
             raise NotFoundError(f"Config '{config_name}' not found")
+        if config_name != config.name and self.dao.contains(config.name):
+            raise ConflictError(f"Config '{config.name}' already exists")
         self.dao.update_config(config_name, config)
 
     @Monitor.synchronized
@@ -286,8 +288,16 @@ class ConfigSqliteDao(ConfigDao):
 
         # Update the config
         cursor.execute(
-            "UPDATE bot_configs SET lowest_price = ?, volume = ?, screenshot_delay = ?, debug_mode = ?, target_schema_index = ? WHERE name = ?",
-            (config.lowest_price, config.volume, config.screenshot_delay, int(config.debug_mode), config.target_schema_index, config_name),
+            "UPDATE bot_configs SET name = ?, lowest_price = ?, volume = ?, screenshot_delay = ?, debug_mode = ?, target_schema_index = ? WHERE name = ?",
+            (
+                config.name,
+                config.lowest_price,
+                config.volume,
+                config.screenshot_delay,
+                int(config.debug_mode),
+                config.target_schema_index,
+                config_name,
+            ),
         )
 
         conn.commit()
