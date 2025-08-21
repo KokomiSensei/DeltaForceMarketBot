@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
 import { Trash2, Edit2, Search, Plus } from "lucide-react"
 import type { BotConfig } from "@/types/bot-config"
 import { apiClient } from "@/lib/api-client"
@@ -39,6 +40,15 @@ export function ConfigSidebar({ selectedConfig, onSelectConfig, onConfigChange }
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; config: BotConfig | null }>({
     open: false,
     config: null,
+  })
+  const [createDialog, setCreateDialog] = useState(false)
+  const [newConfig, setNewConfig] = useState<BotConfig>({
+    name: "",
+    lowest_price: 100,
+    volume: 1000,
+    screenshot_delay: 1000,
+    debug_mode: false,
+    target_schema_index: 0,
   })
   const [newName, setNewName] = useState("")
   const { toast } = useToast()
@@ -89,6 +99,35 @@ export function ConfigSidebar({ selectedConfig, onSelectConfig, onConfigChange }
     }
   }
 
+  const handleCreateConfig = async () => {
+    if (!newConfig.name.trim()) return
+
+    try {
+      await apiClient.createConfig(newConfig)
+      await loadConfigs()
+      onConfigChange()
+      setCreateDialog(false)
+      setNewConfig({
+        name: "",
+        lowest_price: 100,
+        volume: 1000,
+        screenshot_delay: 1000,
+        debug_mode: false,
+        target_schema_index: 0,
+      })
+      toast({
+        title: "Success",
+        description: "Configuration created successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create configuration.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteDialog.config) return
 
@@ -124,7 +163,7 @@ export function ConfigSidebar({ selectedConfig, onSelectConfig, onConfigChange }
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Configurations</h2>
-          <Button size="sm" onClick={() => onConfigChange()}>
+          <Button size="sm" onClick={() => setCreateDialog(true)}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -259,6 +298,83 @@ export function ConfigSidebar({ selectedConfig, onSelectConfig, onConfigChange }
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Dialog */}
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Configuration</DialogTitle>
+            <DialogDescription>Enter the details for your new bot configuration</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium">Name</label>
+              <Input
+                id="name"
+                value={newConfig.name}
+                onChange={(e) => setNewConfig({...newConfig, name: e.target.value})}
+                placeholder="Configuration name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="lowest_price" className="text-sm font-medium">Lowest Price</label>
+              <Input
+                id="lowest_price"
+                type="number"
+                value={newConfig.lowest_price}
+                onChange={(e) => setNewConfig({...newConfig, lowest_price: parseInt(e.target.value) || 0})}
+                placeholder="Lowest price"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="volume" className="text-sm font-medium">Volume</label>
+              <Input
+                id="volume"
+                type="number"
+                value={newConfig.volume}
+                onChange={(e) => setNewConfig({...newConfig, volume: parseInt(e.target.value) || 0})}
+                placeholder="Volume"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="screenshot_delay" className="text-sm font-medium">Screenshot Delay (ms)</label>
+              <Input
+                id="screenshot_delay"
+                type="number"
+                value={newConfig.screenshot_delay}
+                onChange={(e) => setNewConfig({...newConfig, screenshot_delay: parseInt(e.target.value) || 0})}
+                placeholder="Screenshot delay in milliseconds"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label htmlFor="debug_mode" className="text-sm font-medium">Debug Mode</label>
+              <Switch
+                id="debug_mode"
+                checked={newConfig.debug_mode}
+                onCheckedChange={(checked: boolean) => setNewConfig({...newConfig, debug_mode: checked})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="target_schema_index" className="text-sm font-medium">Target Schema Index</label>
+              <Input
+                id="target_schema_index"
+                type="number"
+                value={newConfig.target_schema_index}
+                onChange={(e) => setNewConfig({...newConfig, target_schema_index: parseInt(e.target.value) || 0})}
+                placeholder="Schema index"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateConfig} disabled={!newConfig.name.trim()}>
+                Create
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
