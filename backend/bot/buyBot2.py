@@ -69,12 +69,12 @@ class BuyBot:
 
     def __init__(self, skip_bot_model):
         logger.info("Initializing BuyBot")
-        if not skip_bot_model:
+        if skip_bot_model:
+            self.reader = None
+        else:
             import easyocr
 
             self.reader = easyocr.Reader(["en"], gpu=True)
-        else:
-            self.reader = None
         # Use the active configuration
         self.config = BotConfig()
         self.controller = BuyBot.BotController(self)
