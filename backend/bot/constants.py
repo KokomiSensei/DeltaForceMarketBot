@@ -26,11 +26,11 @@ class PositionalConstants:
 
     PurchaseButton = (2257, 1154)
 
-    PriceRangeTopLeft = (2200, 1150)
+    PriceRangeTopLeft = (2190, 1150)
     PriceRangeBottomRight = (2330, 1175)
 
-    WarningRangeTopLeft = (1233, 989)
-    WarningRangeBottomRight = (1360, 1020)
+    WarningRangeTopLeft = (1110, 990)
+    WarningRangeBottomRight = (1455, 1025)
 
     @staticmethod
     def get_mapped(coord: PositionLike, resolution: PositionLike = None):

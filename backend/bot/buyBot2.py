@@ -62,7 +62,7 @@ class BuyBot:
                 while self.running:
                     self.bot.massive_purchase()
                     logger.info("massive_purchase returned")
-                    time.sleep(5)  # Small delay to prevent CPU overuse
+                    time.sleep(0.05)  # Small delay to prevent CPU overuse
             except Exception as e:
                 logger.error("Error in bot thread: %s", str(e), exc_info=True)
                 self.running = False
@@ -89,7 +89,7 @@ class BuyBot:
     def identify_number(self, img):
         try:
             logger.debug("Running OCR on image")
-            text = self.reader.readtext(np.array(img))
+            text = self.reader.readtext(np.array(img))  # type: ignore
             text = text[-1][1]  # type: ignore
             text = text.replace(",", "")
             text = text.replace(".", "")
@@ -124,14 +124,24 @@ class BuyBot:
         return warning_price
 
     def massive_purchase(self):
-        avg_price = 9999999
+        avg_price = float("inf")
         schema_button_position = PositionalConstants.Schema.Button(self.config.target_schema_index)
         while True:
             if not self.controller.running:
                 logger.debug("Controller not running, exiting massive_purchase")
                 return
             try:
+                # 两个相同方案来回切，以增加识别频率
+                mouse_click(PositionalConstants.to_ratio(PositionalConstants.Schema.Button(1)))
                 total_price = self.identify_price()
+                avg_price = (total_price / self.config.volume) if self.config.volume > 0 else total_price
+                logger.info(
+                    f"Total price: {total_price} / Volume: {self.config.volume} = Avg price: {avg_price:.2f}, Lowest: {self.config.lowest_price}",
+                )
+                if avg_price <= self.config.lowest_price:
+                    break
+
+                mouse_click(PositionalConstants.to_ratio(schema_button_position))
                 avg_price = (total_price / self.config.volume) if self.config.volume > 0 else total_price
                 logger.info(
                     f"Total price: {total_price} / Volume: {self.config.volume} = Avg price: {avg_price:.2f}, Lowest: {self.config.lowest_price}",
@@ -141,14 +151,6 @@ class BuyBot:
             except OcrException as e:
                 logger.error(f"Error identifying price: {e}")
                 return
-            logger.debug("Pressing ESC and L keys")
-            # TODO: 好像不需要退出去，直接切换方案就能刷新价格。不确定
-            # 退出去
-            # pyautogui.press('esc')
-            # pyautogui.press('l')
-            # 直接点另一个方案
-            mouse_click(PositionalConstants.to_ratio(PositionalConstants.Schema.Button(0)))
-            mouse_click(PositionalConstants.to_ratio(schema_button_position))
 
         logger.info(f"Found good price! Average: {avg_price:.2f} < {self.config.lowest_price}")
         if self.config.debug_mode:
@@ -157,16 +159,11 @@ class BuyBot:
         else:
             logger.info("Clicking purchase button")
             mouse_click(PositionalConstants.to_ratio(PositionalConstants.PurchaseButton))
+
+        time.sleep(1)
         try:
-            time.sleep(1)
             warning_price = self.identify_warning()
-            if warning_price > self.config.lowest_price:
-                logger.warning(f"Warning price: {warning_price} > Lowest price: {self.config.lowest_price}")
-                pyautogui.press("esc")
-                pyautogui.press("l")
-                mouse_click(PositionalConstants.to_ratio(schema_button_position))
-            else:
-                mouse_click(PositionalConstants.to_ratio(PositionalConstants.WarningRangeTopLeft))
+            pyautogui.press("esc")
         except OcrException as e:
             logger.error(f"Error identifying warning price: {e}")
             logger.info("Probably made a successful purchase!")
@@ -178,7 +175,7 @@ if __name__ == "__main__":
         run_as_admin()
 
     logger.info("Starting BuyBot application")
-    buy_bot = BuyBot()
+    buy_bot = BuyBot(skip_bot_model=False)
     controller = buy_bot.controller
 
     # Set up keyboard hotkeys

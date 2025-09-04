@@ -4,6 +4,8 @@ playground/**
 
 .idea
 
+*.lnk
+
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

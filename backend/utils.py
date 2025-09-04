@@ -71,9 +71,7 @@ def mouse_click(positon: list, num: int = 1):
         x = int(screen_size.width * x)
         y = int(screen_size.height * y)
     for i in range(num):
-        pyautogui.moveTo(x, y)
-        pyautogui.mouseDown()
-        pyautogui.mouseUp()
+        pyautogui.leftClick(x, y)
 
 
 def get_mouse_position():
